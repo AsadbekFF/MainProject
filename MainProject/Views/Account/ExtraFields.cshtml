@@ -1,0 +1,34 @@
+﻿@model ExtraFieldValue
+@using Microsoft.AspNetCore.Identity
+@using MainProject.Controllers
+
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+@inject RoleManager<IdentityRole> RoleManager
+@{
+    var curUser = await UserManager.GetUserAsync(User);
+    string userId = ViewBag.SelectedUser;
+    string collectionId = ViewBag.SelectedCollection;
+    UserCollections collections = AccountController.dbContext
+        .Users.First(x => x.Id == userId).
+        Collections.First(y => y.Id == ViewBag.SelectedCollection);
+}
+@foreach (var item in collections.ExtraFields)
+{
+    <input name="extraFieldId" value="@item.Id" hidden />
+    if (item.Type == "string")
+    {
+        <label>@item.Name</label>
+        <input name="value" type="text" />
+    }
+    else if (item.Type == "int")
+    {
+        <label>@item.Name</label>
+        <input name="value" type="number" />
+    }
+    else if(item.Type == "date")
+    {
+        <label>@item.Name</label>
+        <input name="value" type="date" />
+    }
+}

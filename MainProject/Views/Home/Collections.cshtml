@@ -1,0 +1,20 @@
+﻿@model List<User>
+<form>
+    @foreach (var item in ViewBag.Collections)
+    {
+        <input name="listOfCollections" value="@item.Id" hidden />
+    }
+    <button asp-action="SortCollection" asp-controller="Home" class="btn btn-sm btn-primary" value="Sort" name="submit"><i class="fas fa-arrow-down-a-z"></i>Sort</button>
+</form>
+<form enctype="multipart/form-data">
+    <select name="filterBy">
+        <option value="Name">Name</option>
+        <option value="Topic">Topic</option>
+    </select>
+    <input name="text" type="text" />
+    @foreach (var item in ViewBag.Collections)
+    {
+       <input name="listOfCollections" value="@item.Id" hidden/> 
+    }
+    <button asp-action="FilterCollection" asp-controller="Home" class="btn btn-sm btn-primary" value="Block" name="submit"><i class="fas fa-filter"></i>Filter</button>
+</form>

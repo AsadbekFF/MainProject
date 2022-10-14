@@ -1,0 +1,135 @@
+﻿@using MainProject.Controllers
+@using Microsoft.AspNetCore.Identity
+@model Message
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+@inject RoleManager<IdentityRole> RoleManager
+@*
+    For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
+*@
+@{
+    string userId = ViewBag.SelectedUser;
+    var curUser = await UserManager.GetUserAsync(User);
+    string GetUserName(string userId)
+    {
+        return AccountController.dbContext.Users.First(x => x.Id == userId).Name;
+    }
+
+    string DateReturn(DateTime date)
+    {
+        string minus;
+        int min = 0;
+        if (DateTime.Now - date < TimeSpan.FromMinutes(60))
+        {
+            minus = Convert.ToInt32((DateTime.Now - date).TotalMinutes).ToString();
+            return $"{minus} minutes ago";
+        }
+        else if (DateTime.Now - date > TimeSpan.FromHours(24))
+        {
+            min = Convert.ToInt32((DateTime.Now - date).TotalDays);
+            if (min > 1)
+            {
+                return $"{min} days ago at {date.ToString("HH:mm")}";
+            }
+            else
+            {
+                return $"{min} day ago at {date.ToString("HH:mm")}";
+            }
+        }
+        else/* if(DateTime.Now - date >= TimeSpan.FromMinutes(60))*/
+        {
+            return string.Format("{0:00}:{1:00} ago", (int)(DateTime.Now - date).TotalHours, (DateTime.Now - date).Minutes);
+        }
+    }
+}
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" rel="stylesheet">
+<div class="marketing-site-content-section">
+    <div class="marketing-site-content-section-img">
+        @if (ViewBag.Image == null)
+        {
+            <img src="~/photos/default_image_01-1024x1024-300x225.png" alt="" />
+        }
+        else
+        {
+            <img src="data:image;base64,@System.Convert.ToBase64String(ViewBag.Image)" alt="" />
+        }
+    </div>
+    @*<div class="marketing-site-content-section-block">
+            <h3 class="marketing-site-content-section-block-header">Yeti Snowcone Agency</h3>
+            <p class="marketing-site-content-section-block-subheader subheader">Lorem ipsum dolor sit amet, consectetur adipisicing elit. Aperiam omnis, maxime libero natus qui minus!</p>
+            <a href="#" class="round button small">learn more</a>
+        </div>*@
+    <div class="marketing-site-content-section-block small-order-2 medium-order-1">
+        <h3 class="marketing-site-content-section-block-header">@ViewBag.SelectedItem.Name</h3>
+        <p class="marketing-site-content-section-block-subheader subheader">@ViewBag.SelectedItem.Description</p>
+    </div>
+</div>
+
+@if (SignInManager.IsSignedIn(User))
+{
+    @if (curUser.Id == userId
+      || User.IsInRole("admin"))
+    {
+        <form asp-action="LikeItem" asp-controller="Account">
+            <div class="ui left labeled button" tabindex="0">
+                <input name="itemId" value="@ViewBag.SelectedItem.Id" hidden />
+                <input name="userId" value="@curUser.Id" hidden />
+                <input name="userCollectionId" value="@ViewBag.SelectedCollection" hidden />
+                <button class="button button-like" type="submit">
+                    <i class="fa fa-heart"></i>
+                    <span>@ViewBag.SelectedItem.LikeCount</span>
+                </button>
+            </div>
+        </form>
+    }
+}
+<script>
+    $(document).foundation();
+
+    $(function () {
+        $('.button-like')
+            .bind('click', function (event) {
+                $(".button-like").toggleClass("liked");
+            })
+    });
+</script>
+<div class="ui comments">
+    <h3 class="ui dividing header">Comments</h3>
+    @foreach (var item in ViewBag.SelectedItem.Chat)
+    {
+        <div class="comment">
+            @*<a class="avatar">
+                    <img src="/images/avatar/small/matt.jpg">
+                </a>*@
+            <div class="content">
+                <a class="author">@GetUserName(item.Sender)</a>
+                <div class="metadata">
+                    <span class="date">@DateReturn(item.When)</span>
+                </div>
+                <div class="text">
+                    @item.Text
+                </div>
+                @*<div class="actions">
+                        <a class="reply">Reply</a>
+                    </div>*@
+            </div>
+        </div>
+    }
+<form class="ui reply form">
+    @if (SignInManager.IsSignedIn(User))
+    {
+    <input asp-for="RecieverId" value="@ViewBag.SelectedUser" hidden/>
+    <input asp-for="Sender" value="@curUser.Id" hidden />
+    <input asp-for="UserItemId" value="@ViewBag.SelectedItem.Id" hidden />
+    <input name="userId" value="@ViewBag.SelectedUser" hidden />
+    <input name="userCollectionId" value="@ViewBag.SelectedCollection" hidden />
+            <div class="field">
+                <textarea asp-for="Text"></textarea>
+            </div>
+            <div class="ui blue labeled submit icon button">
+                <i class="icon edit"></i>
+                <button type="submit" asp-action="SendMessage" asp-controller="Account">Send</button>
+            </div>
+    }
+</form>
+</div>

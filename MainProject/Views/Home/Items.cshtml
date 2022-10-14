@@ -1,0 +1,103 @@
+﻿@model UserItem
+@using Microsoft.AspNetCore.Identity
+@using MainProject.Controllers
+
+@inject UserManager<User> UserManager
+@inject SignInManager<User> SignInManager
+@inject RoleManager<IdentityRole> RoleManager
+@{
+    var curUser = await UserManager.GetUserAsync(User);
+    string GetUserName(string userId)
+    {
+        return AccountController.dbContext.Users.First(x => x.Id == userId).Name;
+    }
+
+    string GetExtraFieldName(string userId, string collectionId,
+        string extrafieldId)
+    {
+        return AccountController.dbContext.Users.First(x => x.Id == userId)
+    .Collections.First(x => x.Id == collectionId)
+    .ExtraFields.First(x => x.Id == extrafieldId).Name;
+    }
+}
+<h2>Recent added items</h2>
+<form>
+    @foreach (var item in ViewBag.Collections)
+    {
+        <input name="items" value="@item.Id" hidden />
+    }
+    <button asp-action="SortItem" asp-controller="Home" class="btn btn-sm btn-primary" value="Sort" name="submit"><i class="fas fa-arrow-down-a-z"></i>Sort</button>
+</form>
+<form>
+    <select name="filterBy">
+        <option value="Name">Name</option>
+        <option value="Description">Description</option>
+        <option value="Tag">Tag</option>
+    </select>
+    <input name="text" type="text" />
+    @foreach (var item in ViewBag.Collections)
+    {
+        <input name="items" value="@item.Id" hidden />
+    }
+    <button asp-action="FilterItem" asp-controller="Home" class="btn btn-sm btn-primary" value="Block" name="submit"><i class="fas fa-filter"></i>Filter</button>
+</form>
+<div class="album bg-light">
+    <div class="container">
+        <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
+            <br />
+            @foreach (var item in ViewBag.Items)
+            {
+                <form asp-controller="Account">
+                    <div class="col">
+                        <div class="card shadow-sm">
+                            <h3>@GetUserName(item.UserId)</h3>
+                            @if (item.Image == null)
+                            {
+                                <img class="bd-placeholder-img card-img-top" src="~/photos/default_image_01-1024x1024-300x225.png" />
+                                @*<svg class="bd-placeholder-img card-img-top" width="100%" height="225" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Placeholder: Thumbnail" preserveAspectRatio="xMidYMid slice" focusable="false"><title>Placeholder</title><rect width="100%" height="100%" fill="#55595c" /><text x="50%" y="50%" fill="#eceeef" dy=".3em">Thumbnail</text></svg>*@
+                            }
+                            else
+                            {
+                                <img class="bd-placeholder-img card-img-top" src="data:image;base64,@System.Convert.ToBase64String(item.Image)" width="300" height="225" role="img" />
+                            }
+
+                            <div class="card-body">
+                                <h2>@item.Name</h2>
+                                <p class="card-text">@item.Description</p>
+                                @foreach (var extra in item.ExtraFieldValues)
+                                {
+                                    <p>
+                                        @GetExtraFieldName(item.UserId, item.UserCollectionsId,
+                                   extra.ExtraFieldId): @extra.Value
+                            </p>
+                        }
+                                @foreach (var tag in item.Tags)
+                                {
+                                    <a asp-action="SearchByTag" asp-route-tag="@tag.Name">#@tag.Name</a>
+                                }
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="btn-group">
+                                        <input name="userId" value="@item.UserId" hidden />
+                                        <input asp-for="Id" value="@item.Id" hidden />
+                                        <input asp-for="UserCollectionsId" value="@item.UserCollectionsId" hidden />
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenItem" asp-controller="Account">View</button>
+                                        @if (SignInManager.IsSignedIn(User))
+                                        {
+                                            @if (curUser.Id == item.UserId
+                                                || User.IsInRole("admin"))
+                                            {
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenEditItem" asp-controller="Account">Edit</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteItem" asp-controller="Account">Delete</button>
+                                            }
+                                        }
+                                    </div>
+                                    <small class="text-muted">@item.DateOfEntered.ToString("MM/dd/yyyy HH:mm")</small>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            }
+        </div>
+    </div>
+</div>

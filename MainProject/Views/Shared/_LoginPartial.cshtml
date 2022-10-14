@@ -1,0 +1,76 @@
+﻿@using Microsoft.AspNetCore.Identity
+@inject SignInManager<User> SignInManager
+@inject UserManager<User> UserManager
+@{
+    var user = await UserManager.GetUserAsync(User);
+}
+
+<ul class="navbar-nav">
+    @if (SignInManager.IsSignedIn(User))
+    {
+        @if (User.IsInRole("admin"))
+        {
+            <li class="nav-item">
+                <a class="nav-link text-dark" asp-controller="Role" asp-action="Index">Admin's privilege</a>
+            </li>
+        }
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Index" title="Manage">@user.Name</a>
+        </li>
+        <li class="nav-item">
+            <form class="form-inline" asp-controller="Account" asp-action="LogOut">
+                <button type="submit">Logout</button>
+            </form>
+        </li>
+    }
+    else
+    {
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-area="" asp-action="Register" asp-controller="Account">Register</a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
+        </li>
+    }
+
+    <li>
+        <form>
+            <link rel="stylesheet" href="//code.jquery.com/ui/1.13.0/themes/base/jquery-ui.css">
+            <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+            <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.js"></script>
+            <input type="text" id="txtSearch" name="CustomerName" />
+            <input type="hidden" id="hfText" name="CustomerId" />
+            <script>
+                $("#txtSearch").autocomplete({
+                    //source: ["c++", "java", "php", "coldfusion", "javascript"],
+                    source: function (request, response) {
+                        var param = { "prefix": request.term };
+                        $.ajax({
+                            url: '/account/autocomplete/',
+                            data: { "prefix": request.term },
+                            datatype: "json",
+                            type: "post",
+                            contenttype: "application/json; charset=utf-8",
+                            success: function (data) {
+                                response($.map(data, function (item) {
+                                    return item;
+                                }))
+                            },
+                            error: function (response) {
+                                alert(response.responsetext);
+                            },
+                            failure: function (response) {
+                                alert(response.responsetext);
+                            }
+                        });
+                    },
+                    select: function (e, i) {
+                        $("#hfText").val(i.item.val);
+                    },
+                    minLength: 1
+                });
+            </script>
+            <button asp-controller="Account" asp-action="Search" type="submit" class="btn btn-sm btn-primary">Search</button>
+        </form>
+    </li>
+</ul>

@@ -1,0 +1,51 @@
+﻿@model UserItem
+@using MainProject.Controllers
+@{
+    string GetExtraFieldName(string userId, string collectionId,
+        string extrafieldId)
+    {
+        return AccountController.dbContext.Users.First(x => x.Id == userId)
+    .Collections.First(x => x.Id == collectionId)
+    .ExtraFields.First(x => x.Id == extrafieldId).Name;
+    }
+}
+<div class="row">
+    <div class="col-md-4">
+        <h4></h4>
+        <section>
+            <form asp-controller="Account" enctype="multipart/form-data">
+                <input asp-for="Id" value="@Model.Id" hidden />
+                <input asp-for="UserId" value="@Model.UserId" hidden />
+                <input asp-for="UserCollectionsId" value="@Model.UserCollectionsId" hidden />
+                <hr />
+                <div class="form-group">
+                    <label asp-for="Name"></label>
+                    <input asp-for="Name" class="form-control" value="@Model.Name" />
+                </div>
+                <div class="form-group">
+                    <label asp-for="Description"></label>
+                    <input asp-for="Description" class="form-control" value="@Model.Description" />
+                </div>
+                <div class="form-group">
+                    @foreach (var item in Model.ExtraFieldValues)
+                    {
+                        <label>@GetExtraFieldName(Model.UserId, Model.UserCollectionsId, item.ExtraFieldId)</label>
+                        <input name="extra" class="form-control" value="@item.Value" />
+                        <input name="extraId" value="@item.Id" type="hidden" />
+                    }
+                </div>
+                <div class="form-group">
+                    <label>Tags</label>
+                    @foreach (var item in Model.Tags)
+                    {
+                        <input name="tag" class="form-control" value="@item.Name" />
+                    }
+                </div>
+                <input name="photo" type="file" />
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default" asp-action="EditItem">Save</button>
+                </div>
+            </form>
+        </section>
+    </div>
+</div>
