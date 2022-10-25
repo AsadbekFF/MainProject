@@ -1,4 +1,7 @@
 ﻿@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
 @inject SignInManager<User> SignInManager
 @inject UserManager<User> UserManager
 @{
@@ -11,7 +14,7 @@
         @if (User.IsInRole("admin"))
         {
             <li class="nav-item">
-                <a class="nav-link text-dark" asp-controller="Role" asp-action="Index">Admin's privilege</a>
+                <a class="nav-link text-dark" asp-controller="Role" asp-action="Index">@Localizer["Admin's privilege"]</a>
             </li>
         }
         <li class="nav-item">
@@ -19,17 +22,17 @@
         </li>
         <li class="nav-item">
             <form class="form-inline" asp-controller="Account" asp-action="LogOut">
-                <button type="submit">Logout</button>
+                <button type="submit">@Localizer["Logout"]</button>
             </form>
         </li>
     }
     else
     {
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-area="" asp-action="Register" asp-controller="Account">Register</a>
+            <a class="nav-link text-dark" asp-area="" asp-action="Register" asp-controller="Account">@Localizer["Register"]</a>
         </li>
         <li class="nav-item">
-            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">Login</a>
+            <a class="nav-link text-dark" asp-controller="Account" asp-action="Login">@Localizer["Login"]</a>
         </li>
     }
 
@@ -70,7 +73,7 @@
                     minLength: 1
                 });
             </script>
-            <button asp-controller="Account" asp-action="Search" type="submit" class="btn btn-sm btn-primary">Search</button>
+            <button asp-controller="Account" asp-action="Search" type="submit" class="btn btn-sm btn-primary">@Localizer["Search"]</button>
         </form>
     </li>
 </ul>

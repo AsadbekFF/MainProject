@@ -1,41 +1,45 @@
 ﻿@using System.Linq
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
 
 @model MainProject.ViewModel.LoginViewModel
 @inject SignInManager<User> SignInManager
 
 @{ ViewData["Title"] = "Log in"; }
 
-<h2>@ViewData["Title"]</h2>
+<h2>@Localizer["Title"]</h2>
 <div class="row">
     <div class="col-md-4">
         <h4></h4>
         <section>
             <form asp-route-returnurl="@ViewData["ReturnUrl"]" method="post">
-                <h4>Use a local account to log in.</h4>
+                <h4>@Localizer["Use a local account to log in."]</h4>
                 <hr />
                 <div asp-validation-summary="All" class="text-danger"></div>
                 <div class="form-group">
-                    <label asp-for="Email"></label>
+                    <label>@Localizer["Email"]</label>
                     <input asp-for="Email" class="form-control" />
                     <span asp-validation-for="Email" class="text-danger"></span>
                 </div>
                 <div class="form-group">
-                    <label asp-for="Password"></label>
+                    <label>@Localizer["Password"]</label>
                     <input asp-for="Password" class="form-control" />
                     <span asp-validation-for="Password" class="text-danger"></span>
                 </div>
                 <div class="form-group">
                     <div class="checkbox">
-                        <label asp-for="RememberMe">
+                        <label>@Localizer["RememberMe"]
                             <input asp-for="RememberMe" />
-                            @Html.DisplayNameFor(m => m.RememberMe)
                         </label>
                     </div>
                 </div>
                 <div class="form-group">
-                    <button type="submit" class="btn btn-default">Log in</button>
+                    <button type="submit" class="btn btn-default">@Localizer["Log in"]</button>
                 </div>
+                <a href="/Account/google">@Localizer["Google Login"]</a>
+                <a href="/Account/facebook">@Localizer["FaceBook Login"]</a>
             </form>
         </section>
     </div>

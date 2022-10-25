@@ -1,15 +1,23 @@
 ﻿@using MainProject.Controllers
 @using Microsoft.AspNetCore.Identity
-@model Message
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
 @inject UserManager<User> UserManager
 @inject SignInManager<User> SignInManager
 @inject RoleManager<IdentityRole> RoleManager
+@model Message
 @*
     For more information on enabling MVC for empty projects, visit https://go.microsoft.com/fwlink/?LinkID=397860
 *@
 @{
     string userId = ViewBag.SelectedUser;
-    var curUser = await UserManager.GetUserAsync(User);
+    var curUser = new User();
+    if (SignInManager.IsSignedIn(User))
+    {
+        curUser = await UserManager.GetUserAsync(User);
+    }
+
     string GetUserName(string userId)
     {
         return AccountController.dbContext.Users.First(x => x.Id == userId).Name;
@@ -41,17 +49,22 @@
             return string.Format("{0:00}:{1:00} ago", (int)(DateTime.Now - date).TotalHours, (DateTime.Now - date).Minutes);
         }
     }
+
+    string getUrlImage(string id)
+    {
+        return AccountController.cloudinary.GetResource(id).Url;
+    }
 }
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.css" rel="stylesheet">
 <div class="marketing-site-content-section">
     <div class="marketing-site-content-section-img">
-        @if (ViewBag.Image == null)
+        @if (ViewBag.SelectedItem.Image == null)
         {
             <img src="~/photos/default_image_01-1024x1024-300x225.png" alt="" />
         }
         else
         {
-            <img src="data:image;base64,@System.Convert.ToBase64String(ViewBag.Image)" alt="" />
+            <img src="@getUrlImage(ViewBag.SelectedItem.Image)" width="300" height="225" role="img" />
         }
     </div>
     @*<div class="marketing-site-content-section-block">
@@ -62,13 +75,22 @@
     <div class="marketing-site-content-section-block small-order-2 medium-order-1">
         <h3 class="marketing-site-content-section-block-header">@ViewBag.SelectedItem.Name</h3>
         <p class="marketing-site-content-section-block-subheader subheader">@ViewBag.SelectedItem.Description</p>
+        @foreach (var extra in ViewBag.SelectedItem.ExtraFieldValues)
+        {
+            <p class="marketing-site-content-section-block-subheader subheader">@extra.ExtraFieldName: @extra.Value</p>
+        }
+        @foreach (var tag in ViewBag.SelectedItem.Tags)
+        {
+            <a class="marketing-site-content-section-block-subheader subheader" asp-action="SearchByTag" asp-route-tag="@tag.Name">#@tag.Name</a>
+        }
     </div>
 </div>
 
+<label>@Localizer["Likes"]: @ViewBag.SelectedItem.LikeCount</label>
 @if (SignInManager.IsSignedIn(User))
 {
     @if (curUser.Id == userId
-      || User.IsInRole("admin"))
+     || User.IsInRole("admin"))
     {
         <form asp-action="LikeItem" asp-controller="Account">
             <div class="ui left labeled button" tabindex="0">
@@ -94,13 +116,10 @@
     });
 </script>
 <div class="ui comments">
-    <h3 class="ui dividing header">Comments</h3>
+    <h3 class="ui dividing header">@Localizer["Comments"]</h3>
     @foreach (var item in ViewBag.SelectedItem.Chat)
     {
         <div class="comment">
-            @*<a class="avatar">
-                    <img src="/images/avatar/small/matt.jpg">
-                </a>*@
             <div class="content">
                 <a class="author">@GetUserName(item.Sender)</a>
                 <div class="metadata">
@@ -109,27 +128,73 @@
                 <div class="text">
                     @item.Text
                 </div>
-                @*<div class="actions">
-                        <a class="reply">Reply</a>
-                    </div>*@
             </div>
         </div>
     }
-<form class="ui reply form">
-    @if (SignInManager.IsSignedIn(User))
-    {
-    <input asp-for="RecieverId" value="@ViewBag.SelectedUser" hidden/>
-    <input asp-for="Sender" value="@curUser.Id" hidden />
-    <input asp-for="UserItemId" value="@ViewBag.SelectedItem.Id" hidden />
-    <input name="userId" value="@ViewBag.SelectedUser" hidden />
-    <input name="userCollectionId" value="@ViewBag.SelectedCollection" hidden />
-            <div class="field">
-                <textarea asp-for="Text"></textarea>
-            </div>
-            <div class="ui blue labeled submit icon button">
-                <i class="icon edit"></i>
-                <button type="submit" asp-action="SendMessage" asp-controller="Account">Send</button>
-            </div>
-    }
-</form>
+    <div id="chatroom">
+
+    </div>
+    <div id="inputForm">
+        @if (SignInManager.IsSignedIn(User))
+        {
+
+            <input type="text" id="userId" value="@ViewBag.SelectedItem.UserId" hidden />
+            <input type="text" id="collectionId" value="@ViewBag.SelectedItem.UserCollectionsId" hidden />
+            <input type="text" id="itemId" value="@ViewBag.SelectedItem.Id" hidden />
+            <input type="text" id="curUserId" value="@curUser.Id" hidden />
+            <input type="text" id="curUserName" value="@GetUserName(curUser.Id)" hidden />
+            <input type="text" id="message" />
+            <input type="button" id="sendBtn" value="@Localizer["Send"]" />
+        }
+        <script src="~/js/signalr/dist/browser/signalr.min.js"></script>
+        <script>
+            const hubConnection = new signalR.HubConnectionBuilder()
+                .withUrl("/chat")
+                .build();
+
+            let userName = '';
+            // получение сообщения от сервера
+            hubConnection.on('Send', function (message, userName, when) {
+
+                newRowAdd = '<div class="comment">' +
+                    '<div class="content">' +
+                    '<a class="author">' + userName + '</a>' +
+                    '<div class="metadata">' +
+                    '<span class="date">' + when + '</span>' +
+                    '</div>' +
+                    '<div class="text">' +
+                    message +
+                    '</div>' +
+                    '</div>' +
+                    '</div>';
+                // создаем элемент <b> для имени пользователя
+                let userNameElem = document.createElement("b");
+                userNameElem.appendChild(document.createTextNode(userName + ': '));
+
+                // создает элемент <p> для сообщения пользователя
+                let elem = document.createElement("p");
+                elem.appendChild(userNameElem);
+                elem.appendChild(document.createTextNode(message));
+                elem.appendChild(document.createTextNode(when));
+
+                $('#chatroom').append(newRowAdd);
+
+            });
+
+            // отправка сообщения на сервер
+            document.getElementById("sendBtn").addEventListener("click", function (e) {
+                let message = document.getElementById("message").value;
+                let userId = document.getElementById("userId").value;
+                let collectionId = document.getElementById("collectionId").value;
+                let itemId = document.getElementById("itemId").value;
+                let curUserId = document.getElementById("curUserId").value;
+                let curUserName = document.getElementById("curUserName").value;
+                hubConnection.invoke("Send", userId, collectionId, itemId, message,
+                    curUserId, curUserName);
+                document.getElementById("message").value = "";
+            });
+
+            hubConnection.start();
+        </script>
+    </div>
 </div>

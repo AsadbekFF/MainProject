@@ -1,7 +1,9 @@
 ﻿@model UserCollections
 @using Microsoft.AspNetCore.Identity
 @using MainProject.Controllers
+@using Microsoft.AspNetCore.Mvc.Localization
 
+@inject IViewLocalizer Localizer
 @inject UserManager<User> UserManager
 @inject SignInManager<User> SignInManager
 @inject RoleManager<IdentityRole> RoleManager
@@ -9,151 +11,107 @@
     string userId = ViewBag.SelectedUser;
     var curUser = await UserManager.GetUserAsync(User);
     string idus = ViewBag.SelectedUser;
-    string userName = AccountController.dbContext
+    string userName = UserManager
         .Users.First(x => x.Id == userId).Name;
+    string userNameCol = userName + Localizer["Collection"].Value;
+
+    string getUrlImage(string id)
+    {
+        return AccountController.cloudinary.GetResource(id).Url;
+    }
 }
 <form asp-controller="Account" asp-action="AddCollection" enctype="multipart/form-data">
-    <input asp-for="Name" type="text" placeholder="Name" />
-    <input asp-for="Topic" type="text" placeholder="Topic" />
+    <input asp-for="Name" type="text" placeholder="@Localizer["Name"]" />
+    <input asp-for="Topic" type="text" placeholder="@Localizer["Topic"]" />
     <ul>
         <li>
-            <label>Numeric type</label>
-            <input id="checkboxint" name="type" value="int" type="checkbox" />
-            <label>Text type</label>
+            <label>@Localizer["Text type"]</label>
             <input id="checkboxstring" name="type" value="string" type="checkbox" />
-            <label>Date type</label>
-            <input id="checkboxdate" name="type" value="date" type="checkbox" />
-            <input id="inputint" type="text" name="nameOfField" style="display: none" placeholder="Name of field" />
+            @for (int i = 0; i < new Random().Next(1, 4); i++)
+            {
+                <input class="inputint" type="text" name="nameOfStringField" style="display: none" placeholder="@Localizer["Name of field"]" />
+            }
         </li>
         <li>
-            <label>Numeric type</label>
+            <label>@Localizer["Numeric type"]</label>
             <input id="checkboxint1" name="type" value="int" type="checkbox" />
-            <label>Text type</label>
-            <input id="checkboxstring1" name="type" value="string" type="checkbox" />
-            <label>Date type</label>
-            <input id="checkboxdate1" name="type" value="date" type="checkbox" />
-            <input id="inputint1" type="text" name="nameOfField" style="display: none" placeholder="Name of field" />
+            @for (int i = 0; i < new Random().Next(1, 4); i++)
+            {
+                <input class="inputint1" type="text" name="nameOfIntField" style="display: none" placeholder="@Localizer["Name of field"]" />
+            }
         </li>
         <li>
-            <label>Numeric type</label>
-            <input id="checkboxint2" name="type" value="int" type="checkbox" />
-            <label>Text type</label>
-            <input id="checkboxstring2" name="type" value="string" type="checkbox" />
-            <label>Date type</label>
+            <label>@Localizer["Date type"]</label>
             <input id="checkboxdate2" name="type" value="date" type="checkbox" />
-            <input id="inputint2" type="text" name="nameOfField" style="display: none" placeholder="Name of field" />
+            @for (int i = 0; i < new Random().Next(1, 4); i++)
+            {
+                <input class="inputint2" type="text" name="nameOfDateField" style="display: none" placeholder="@Localizer["Name of field"]" />
+            }
         </li>
     </ul>
-    <textarea asp-for="Description" placeholder="Description"></textarea>
+    <textarea asp-for="Description" placeholder="@Localizer["Description"]"></textarea>
     <input type="file" name="image" />
     <input asp-for="UserId" value="@idus" hidden />
-    <button type="submit">Add</button>
+    <button type="submit">@Localizer["Add"]</button>
     <script>
-        let cb = document.getElementById("checkboxint"),
-            cb1 = document.getElementById("checkboxstring"),
-            cb2 = document.getElementById("checkboxdate"),
-            cb3 = document.getElementById("inputint"),
+        let cb1 = document.getElementById("checkboxstring"),
+            cb3 = document.querySelectorAll(".inputint"),
             c = document.getElementById("checkboxint1"),
-            c1 = document.getElementById("checkboxstring1"),
-            c2 = document.getElementById("checkboxdate1"),
-            c3 = document.getElementById("inputint1"),
-            b = document.getElementById("checkboxint2"),
-            b1 = document.getElementById("checkboxstring2"),
+            c3 = document.querySelectorAll(".inputint1"),
             b2 = document.getElementById("checkboxdate2"),
-            b3 = document.getElementById("inputint2");
-            cb.addEventListener('change', function () {
-                if (cb.checked == true) {
-                    cb1.checked = false;
-                    cb2.checked = false;
-                    cb3.style.display = 'inline-block';
-                }
-                else {
-                    cb3.style.display = 'none';
-                }
-            });
-            cb1.addEventListener('change', function () {
+            b3 = document.querySelectorAll(".inputint2");
+        cb1.addEventListener('change', function () {
             if (cb1.checked == true) {
-                cb.checked = false;
-                cb2.checked = false;
-                cb3.style.display = 'inline-block';
+                for (let i = 0; i < cb3.length; i++) {
+                    cb3[i].style.display = "inline-block";
+                }
             }
             else {
-                cb3.style.display = 'none';
+                for (let i = 0; i < cb3.length; i++) {
+                    cb3[i].style.display = "none";
+                }
             }
-            });
-            cb2.addEventListener('change', function () {
-            if (cb2.checked == true) {
-                cb.checked = false;
-                cb1.checked = false;
-                cb3.style.display = 'inline-block';
-            }
-            else {
-                cb3.style.display = 'none';
-            }
-            });
+        });
         c.addEventListener('change', function () {
             if (c.checked == true) {
-                c1.checked = false;
-                c2.checked = false;
-                c3.style.display = 'inline-block';
+                for (let i = 0; i < c3.length; i++) {
+                    c3[i].style.display = "inline-block";
+                }
             }
             else {
-                c3.style.display = 'none';
-            }
-        });
-        c1.addEventListener('change', function () {
-            if (c1.checked == true) {
-                c.checked = false;
-                c2.checked = false;
-                c3.style.display = 'inline-block';
-            }
-            else {
-                c3.style.display = 'none';
-            }
-        });
-        c2.addEventListener('change', function () {
-            if (c2.checked == true) {
-                c.checked = false;
-                c1.checked = false;
-                c3.style.display = 'inline-block';
-            }
-            else {
-                c3.style.display = 'none';
-            }
-        });
-        b.addEventListener('change', function () {
-            if (b.checked == true) {
-                b1.checked = false;
-                b2.checked = false;
-                b3.style.display = 'inline-block';
-            }
-            else {
-                b3.style.display = 'none';
-            }
-        });
-        b1.addEventListener('change', function () {
-            if (b1.checked == true) {
-                b.checked = false;
-                b2.checked = false;
-                b3.style.display = 'inline-block';
-            }
-            else {
-                b3.style.display = 'none';
+                for (let i = 0; i < c3.length; i++) {
+                    c3[i].style.display = "none";
+                }
             }
         });
         b2.addEventListener('change', function () {
             if (b2.checked == true) {
-                b.checked = false;
-                b1.checked = false;
-                b3.style.display = 'inline-block';
+                for (let i = 0; i < b3.length; i++) {
+                    b3[i].style.display = "inline-block";
+                }
             }
             else {
-                b3.style.display = 'none';
+                for (let i = 0; i < b3.length; i++) {
+                    b3[i].style.display = "none";
+                }
             }
         });
     </script>
 </form>
-<h2>@userName's collections</h2>
+<form>
+    <input name="userId" type="hidden" value="@userId"/>
+    <button asp-action="SortCollection" asp-controller="Account" class="btn btn-sm btn-primary" value="Sort" name="submit"><i class="fas fa-arrow-down-a-z"></i>@Localizer["Sort"]</button>
+</form>
+<form enctype="multipart/form-data">
+    <select name="filterBy">
+        <option value="Name">@Localizer["Name"]</option>
+        <option value="Topic">@Localizer["Topic"]</option>
+    </select>
+    <input name="text" type="text" />
+    <input name="userId" type="hidden" value="@userId" />
+    <button asp-action="FilterCollection" asp-controller="Account" class="btn btn-sm btn-primary" value="Block" name="submit"><i class="fas fa-filter"></i>@Localizer["Filter"]</button>
+</form>
+<h2>@userNameCol</h2>
 <div class="album bg-light">
     <div class="container">
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
@@ -164,11 +122,11 @@
                         <div class="card shadow-sm">
                             @if (item.Image == null)
                             {
-                                <img class="bd-placeholder-img card-img-top" src="~/photos/default_image_01-1024x1024-300x225.png"/>
+                                <img class="bd-placeholder-img card-img-top" src="~/photos/default_image_01-1024x1024-300x225.png" />
                             }
                             else
                             {
-                                <img class="bd-placeholder-img card-img-top" src="data:image;base64,@System.Convert.ToBase64String(item.Image)" width="300" height="225" role="img" />
+                                <img class="bd-placeholder-img card-img-top" src="@getUrlImage(item.Image)" width="300" height="225" role="img" />
                             }
 
                             <div class="card-body">
@@ -180,14 +138,14 @@
                                     <div class="btn-group">
                                         <input asp-for="UserId" value="@item.UserId" hidden />
                                         <input asp-for="Id" value="@item.Id" hidden />
-                                        <button asp-action="OpenCollection" class="btn btn-sm btn-outline-secondary">View</button>
+                                        <button asp-action="OpenCollection" class="btn btn-sm btn-outline-secondary">@Localizer["View"]</button>
                                         @if (SignInManager.IsSignedIn(User))
                                         {
                                             @if (curUser.Id == item.UserId
-                                              || User.IsInRole("admin"))
+                                            || User.IsInRole("admin"))
                                             {
-                                                <button asp-action="OpenEditCollection" class="btn btn-sm btn-outline-secondary">Edit</button>
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteCollection" asp-controller="Account">Delete</button>
+                                                <button asp-action="OpenEditCollection" class="btn btn-sm btn-outline-secondary">@Localizer["Edit"]</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteCollection" asp-controller="Account">@Localizer["Delete"]</button>
                                             }
                                         }
                                     </div>

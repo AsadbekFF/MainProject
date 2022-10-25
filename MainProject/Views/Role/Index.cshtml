@@ -1,20 +1,48 @@
-﻿@model IEnumerable<Microsoft.AspNetCore.Identity.IdentityRole>
+﻿@model IEnumerable<User>
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.Localization
 
-<h2>Список ролей</h2>
-<table class="table">
-    @foreach (var role in Model)
-    {
+@inject IViewLocalizer Localizer
+@inject RoleManager<IdentityRole> RoleManager
+@inject UserManager<User> UserManager
+<script src="https://kit.fontawesome.com/a076d05399.js" crossorigin="anonymous"></script>
+<h2>@Localizer["List of users"]</h2>
+<form asp-controller="Role">
+
+    <button asp-action="DeleteUsers" class="btn btn-sm btn-primary" value="Delete" name="submit"><i class="fas fa-user-slash"></i> @Localizer["Delete"]</button>
+    <button asp-action="Block" class="btn btn-sm btn-primary" value="Block" name="submit"><i class="fas fa-lock"></i> @Localizer["Block"]</button>
+    <button asp-action="Unblock" class="btn btn-sm btn-primary" value="Unblock" name="submit"><i class="fas fa-lock-open"></i> @Localizer["Unblock"]</button>
+    <button asp-action="Promote" class="btn btn-sm btn-primary" value="Promote" name="submit"><i class="fas fa-up-right-from-square"></i>@Localizer["Promote"]</button>
+    <button asp-action="Downgrade" class="btn btn-sm btn-primary" value="Downgrade" name="submit"><i class="fas fa-thumbs-down"></i>@Localizer["Downgrade"]</button>
+    <table class="table">
         <tr>
-            <td>@role.Name</td>
-            <td>
-                <form asp-action="Delete" asp-route-id="@role.Id" method="post">
-                    <button type="submit" class="btn btn-sm btn-danger">
-                        Удалить
-                    </button>
-                </form>
-            </td>
+            <td>@Localizer["Email"]</td>
+            <td>@Localizer["Status"]</td>
+            <td>@Localizer["Role"]</td>
+            <td style=""><input id="check" type="checkbox" /></td>
         </tr>
-    }
-</table>
-<a asp-action="Create">Добавить роль</a>
-<a asp-action="UserList">Список пользователей</a>
+        @foreach (var user in Model)
+        {
+            <tr>
+                <td>@user.Email</td>
+                @if (user.Blocked)
+                {
+                    <td style="background-color: red">@Localizer["Blocked"]</td>
+                }
+                else
+                {
+                    <td style="background-color: chartreuse">@Localizer["Active"]</td>
+                }
+                @if (UserManager.IsInRoleAsync(user, "admin").Result)
+                {
+                    <td>@Localizer["Admin"]</td>
+                }
+                else
+                {
+                    <td>@Localizer["User"]</td>
+                }
+                <td style=""><input name="checkbox" id="check2" value="@user.Id" class="checkbox2" type="checkbox" /></td>
+            </tr>
+        }
+    </table>
+</form>

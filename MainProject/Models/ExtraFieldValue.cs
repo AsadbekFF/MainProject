@@ -11,6 +11,6 @@ namespace MainProject.Models
         public string Value { get; set; }
         [JsonIgnore]
         public string UserItemId { get; set; }
-        public string ExtraFieldId { get; set; }
+        public string ExtraFieldName { get; set; }
     }
 }

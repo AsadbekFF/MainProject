@@ -15,7 +15,7 @@
 }
 @foreach (var item in collections.ExtraFields)
 {
-    <input name="extraFieldId" value="@item.Id" hidden />
+    <input name="extraFieldId" value="@item.Name" hidden />
     if (item.Type == "string")
     {
         <label>@item.Name</label>

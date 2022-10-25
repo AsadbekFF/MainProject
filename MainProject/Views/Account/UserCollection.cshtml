@@ -1,7 +1,9 @@
 ﻿@model UserItem
 @using Microsoft.AspNetCore.Identity
 @using MainProject.Controllers
+@using Microsoft.AspNetCore.Mvc.Localization
 
+@inject IViewLocalizer Localizer
 @inject UserManager<User> UserManager
 @inject SignInManager<User> SignInManager
 @inject RoleManager<IdentityRole> RoleManager
@@ -15,29 +17,108 @@
     string userName = AccountController.dbContext
         .Users.First(x => x.Id == userId).Name;
 
-    string GetExtraFieldName(string id)
+    string getUrlImage(string id)
     {
-        return collections.ExtraFields.First(x => x.Id == id).Name;
+        return AccountController.cloudinary.GetResource(id).Url;
     }
 }
 @if (SignInManager.IsSignedIn(User))
 {
     @if (curUser.Id == userId
-      || User.IsInRole("admin"))
+    || User.IsInRole("admin"))
     {
-<form asp-controller="Account" asp-action="AddItem" enctype="multipart/form-data">
-    <input asp-for="Name" type="text" placeholder="Name" />
-    <textarea asp-for="Description" placeholder="Description"></textarea>
-    <input name="tags" type="text" placeholder="Write with space tags"/>
-    <partial name="ExtraFields" />
-    <input type="file" name="image" />
-    <input asp-for="UserCollectionsId" value="@collectionId" hidden />
-    <input asp-for="UserId" value="@userId" hidden />
-    <button type="submit">Add</button>
-</form>
+        <form asp-controller="Account" asp-action="AddItem" enctype="multipart/form-data">
+            <input asp-for="Name" type="text" placeholder="@Localizer["Name"]" />
+            <textarea asp-for="Description" placeholder="@Localizer["Description"]"></textarea>
+            <div id="row">
+                <div class="input-group m-3">
+                    <button class="btn btn-danger" id="DeleteRow" type="button">
+                        <i class="bi bi-trash"></i>
+                        @Localizer["Delete"]
+                    </button>
+                    <input id="tagSearch" name="tags" type="text">
+                    <input type="hidden" id="tagsText" name="CustomerId" />
+                </div>
+            </div>
+
+            <div id="newinput"></div>
+            <button id="rowAdder" type="button" class="btn btn-dark">
+                <span class="bi bi-plus-square-dotted">
+                </span> @Localizer["Add tag"]
+            </button>
+            <link rel="stylesheet" href="//code.jquery.com/ui/1.13.0/themes/base/jquery-ui.css">
+            <script src="https://code.jquery.com/jquery-3.6.0.js"></script>
+            <script src="https://code.jquery.com/ui/1.13.0/jquery-ui.js"></script>
+            <script>
+                $("#tagSearch").autocomplete({
+                    source: function (request, response) {
+                        var param = { "prefix": request.term };
+                        $.ajax({
+                            url: '/account/tagautocomplete/',
+                            data: { "prefix": request.term },
+                            datatype: "json",
+                            type: "post",
+                            contenttype: "application/json; charset=utf-8",
+                            success: function (data) {
+                                response($.map(data, function (item) {
+                                    return item;
+                                }))
+                            },
+                            error: function (response) {
+                                alert(response.responsetext);
+                            },
+                            failure: function (response) {
+                                alert(response.responsetext);
+                            }
+                        });
+                    },
+                    select: function (e, i) {
+                        $("#tagsText").val(i.item.val);
+                    },
+                    minLength: 1
+                });
+            </script>
+            <script type="text/javascript">
+                $("#rowAdder").click(function () {
+                    newRowAdd =
+                        '<div id="row"> <div class="input-group m-3">' +
+                        '<button class="btn btn-danger" id="DeleteRow" type="button">' +
+                        '<i class="bi bi-trash"></i> Delete</button>' +
+                        '<input id="tagSearch" name="tags" type="text"> <input type="hidden" id="tagsText" name="CustomerId" /> </div> </div>';
+
+                    $('#newinput').append(newRowAdd);
+                });
+
+                $("body").on("click", "#DeleteRow", function () {
+                    $(this).parents("#row").remove();
+                })
+            </script>
+            <partial name="ExtraFields" />
+            <input type="file" name="image" />
+            <input asp-for="UserCollectionsId" value="@collectionId" hidden />
+            <input asp-for="UserId" value="@userId" hidden />
+            <br />
+            <button type="submit">@Localizer["Add"]</button>
+        </form>
     }
 }
-<h2>@userName's @collections.Name collection</h2>
+<form>
+    <input name="userId" type="hidden" value="@ViewBag.SelectedUser" />
+    <input name="collectionId" type="hidden" value="@ViewBag.SelectedCollection" />
+    <button asp-action="SortItem" asp-controller="Account" class="btn btn-sm btn-primary" value="Sort" name="submit"><i class="fas fa-arrow-down-a-z"></i>@Localizer["Sort"]</button>
+</form>
+<form>
+    <select name="filterBy">
+        <option value="Name">@Localizer["Name"]</option>
+        <option value="Description">@Localizer["Description"]</option>
+        <option value="Tag">@Localizer["Tag"]</option>
+    </select>
+    <input name="text" type="text" />
+    <input name="userId" type="hidden" value="@ViewBag.SelectedUser"/>
+    <input name="collectionId" type="hidden" value="@ViewBag.SelectedCollection" />
+    <button asp-action="FilterItem" asp-controller="Account" class="btn btn-sm btn-primary" value="Block" name="submit"><i class="fas fa-filter"></i>@Localizer["Filter"]</button>
+</form>
+<h2>@Localizer["Collection"]</h2>
 <div class="album bg-light">
     <div class="container">
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
@@ -53,7 +134,7 @@
                             }
                             else
                             {
-                                <img class="bd-placeholder-img card-img-top" src="data:image;base64,@System.Convert.ToBase64String(item.Image)" width="300" height="225" role="img" />
+                                <img class="bd-placeholder-img card-img-top" src="@getUrlImage(item.Image)" width="300" height="225" role="img" />
                             }
 
                             <div class="card-body">
@@ -61,7 +142,7 @@
                                 <p class="card-text">@item.Description</p>
                                 @foreach (var extra in item.ExtraFieldValues)
                                 {
-                                    <p>@GetExtraFieldName(extra.ExtraFieldId): @extra.Value</p>
+                                    <p>@extra.ExtraFieldName: @extra.Value</p>
                                 }
                                 @foreach (var tag in item.Tags)
                                 {
@@ -72,14 +153,14 @@
                                         <input name="userId" value="@userId" hidden />
                                         <input asp-for="Id" value="@item.Id" hidden />
                                         <input asp-for="UserCollectionsId" value="@item.UserCollectionsId" hidden />
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenItem">View</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenItem">@Localizer["View"]</button>
                                         @if (SignInManager.IsSignedIn(User))
                                         {
                                             @if (curUser.Id == userId
-                                           || User.IsInRole("admin"))
+                                         || User.IsInRole("admin"))
                                             {
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenEditItem">Edit</button>
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteItem">Delete</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenEditItem">@Localizer["Edit"]</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteItem">@Localizer["Delete"]</button>
                                             }
                                         }
                                     </div>
@@ -94,4 +175,8 @@
     </div>
 </div>
 <br />
-<a href="~/Collection.txt" download="" class="downloadButton">Download</a>
+<form asp-controller="Account" asp-action="Download">
+    <input name="userId" value="@userId" hidden />
+    <input name="collectionId" value="@collectionId" hidden />
+    <button asp-action="Download">@Localizer["Download"]</button>
+</form>

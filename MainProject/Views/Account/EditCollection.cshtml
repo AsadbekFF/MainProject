@@ -1,29 +1,35 @@
-﻿@model UserCollections
+﻿@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
+
+@model UserCollections
+@{ 
+}
 
 <div class="row">
     <div class="col-md-4">
         <h4></h4>
         <section>
             <form asp-controller="Account" enctype="multipart/form-data">
-                <h4>Edit @Model.Name collection</h4>
+                <h4>@Localizer["Edit collection"]</h4>
                 <hr />
                 <input asp-for="Id" value="@Model.Id" hidden />
                 <input asp-for="UserId" value="@Model.UserId" hidden />
                 <div class="form-group">
-                    <label asp-for="Name"></label>
+                    <label>@Localizer["Name"]</label>
                     <input asp-for="Name" class="form-control" value="@Model.Name" />
                 </div>
                 <div class="form-group">
-                    <label asp-for="Description"></label>
+                    <label>@Localizer["Description"]</label>
                     <input asp-for="Description" class="form-control" value="@Model.Description" />
                 </div>
                 <div class="form-group">
-                    <label asp-for="Topic"></label>
+                    <label>@Localizer["Topic"]</label>
                     <input asp-for="Topic" class="form-control" value="@Model.Topic" />
                 </div>
-                <input type="file" name="photo"/>
+                <input type="file" name="photo" />
                 <div class="form-group">
-                    <button type="submit" class="btn btn-default" asp-action="EditCollection" asp-controller="Account">Save</button>
+                    <button type="submit" class="btn btn-default" asp-action="EditCollection" asp-controller="Account">@Localizer["Save"]</button>
                 </div>
             </form>
         </section>

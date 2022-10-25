@@ -1,20 +1,24 @@
-﻿@model List<User>
+﻿@using Microsoft.AspNetCore.Mvc.Localization
+@model List<User>
+
+@inject IViewLocalizer Localizer
+
 <form>
     @foreach (var item in ViewBag.Collections)
     {
         <input name="listOfCollections" value="@item.Id" hidden />
     }
-    <button asp-action="SortCollection" asp-controller="Home" class="btn btn-sm btn-primary" value="Sort" name="submit"><i class="fas fa-arrow-down-a-z"></i>Sort</button>
+    <button asp-action="SortCollection" asp-controller="Home" class="btn btn-sm btn-primary" value="Sort" name="submit"><i class="fas fa-arrow-down-a-z"></i>@Localizer["Sort"]</button>
 </form>
 <form enctype="multipart/form-data">
     <select name="filterBy">
-        <option value="Name">Name</option>
-        <option value="Topic">Topic</option>
+        <option value="Name">@Localizer["Name"]</option>
+        <option value="Topic">@Localizer["Topic"]</option>
     </select>
     <input name="text" type="text" />
     @foreach (var item in ViewBag.Collections)
     {
-       <input name="listOfCollections" value="@item.Id" hidden/> 
+        <input name="listOfCollections" value="@item.Id" hidden />
     }
-    <button asp-action="FilterCollection" asp-controller="Home" class="btn btn-sm btn-primary" value="Block" name="submit"><i class="fas fa-filter"></i>Filter</button>
+    <button asp-action="FilterCollection" asp-controller="Home" class="btn btn-sm btn-primary" value="Block" name="submit"><i class="fas fa-filter"></i>@Localizer["Filter"]</button>
 </form>

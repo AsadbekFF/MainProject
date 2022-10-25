@@ -1,13 +1,16 @@
 ﻿@model UserItem
 @using MainProject.Controllers
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
 @{
-    string GetExtraFieldName(string userId, string collectionId,
-        string extrafieldId)
+    string GetTypeOfExtraField(string userId, string collectionId, string extraId)
     {
         return AccountController.dbContext.Users.First(x => x.Id == userId)
     .Collections.First(x => x.Id == collectionId)
-    .ExtraFields.First(x => x.Id == extrafieldId).Name;
+    .ExtraFields.First(x => x.Name == extraId).Type;
     }
+    string type = "";
 }
 <div class="row">
     <div class="col-md-4">
@@ -19,23 +22,34 @@
                 <input asp-for="UserCollectionsId" value="@Model.UserCollectionsId" hidden />
                 <hr />
                 <div class="form-group">
-                    <label asp-for="Name"></label>
+                    <label>@Localizer["Name"]</label>
                     <input asp-for="Name" class="form-control" value="@Model.Name" />
                 </div>
                 <div class="form-group">
-                    <label asp-for="Description"></label>
+                    <label>@Localizer["Description"]</label>
                     <input asp-for="Description" class="form-control" value="@Model.Description" />
                 </div>
                 <div class="form-group">
                     @foreach (var item in Model.ExtraFieldValues)
                     {
-                        <label>@GetExtraFieldName(Model.UserId, Model.UserCollectionsId, item.ExtraFieldId)</label>
-                        <input name="extra" class="form-control" value="@item.Value" />
+                        <label>@item.ExtraFieldName</label>
+                        @if ((type = GetTypeOfExtraField(Model.UserId, Model.UserCollectionsId, item.ExtraFieldName)) == "date")
+                        {
+                            <input name="extra" class="form-control" type="date" value="@item.Value" />
+                        }
+                        else if (type == "string")
+                        {
+                            <input name="extra" class="form-control" type="text" value="@item.Value" />
+                        }
+                        else if (type == "int")
+                        {
+                            <input name="extra" class="form-control" type="number" value="@item.Value" />
+                        }
                         <input name="extraId" value="@item.Id" type="hidden" />
                     }
                 </div>
                 <div class="form-group">
-                    <label>Tags</label>
+                    <label>@Localizer["Tags"]</label>
                     @foreach (var item in Model.Tags)
                     {
                         <input name="tag" class="form-control" value="@item.Name" />
@@ -43,7 +57,10 @@
                 </div>
                 <input name="photo" type="file" />
                 <div class="form-group">
-                    <button type="submit" class="btn btn-default" asp-action="EditItem">Save</button>
+                    <button type="submit" class="btn btn-default" asp-action="EditItem">@Localizer["Save"]</button>
+                </div>
+                <div class="form-group">
+                    <button type="submit" class="btn btn-default" asp-action="CancelChanges">@Localizer["Cancel"]</button>
                 </div>
             </form>
         </section>

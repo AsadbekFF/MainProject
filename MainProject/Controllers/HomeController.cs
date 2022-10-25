@@ -9,6 +9,8 @@ using System.Diagnostics;
 using System.Linq;
 using System.Threading.Tasks;
 using MainProject.Controllers;
+using Microsoft.AspNetCore.Localization;
+using Microsoft.AspNetCore.Http;
 
 namespace MiddlePartProject.Controllers
 {
@@ -65,6 +67,18 @@ namespace MiddlePartProject.Controllers
             return View();
         }
 
+        [HttpPost]
+        public IActionResult SetLanguage(string culture, string returnUrl)
+        {
+            Response.Cookies.Append(
+                CookieRequestCultureProvider.DefaultCookieName,
+                CookieRequestCultureProvider.MakeCookieValue(new RequestCulture(culture)),
+                new CookieOptions { Expires = DateTimeOffset.UtcNow.AddYears(1) }
+                );
+
+            return RedirectToAction("Index");
+        }
+
         public IActionResult Privacy()
         {
             return View();
@@ -87,13 +101,13 @@ namespace MiddlePartProject.Controllers
                 case "Name":
                     cols.ForEach(x => {
                         if (x.Name.ToUpperInvariant()
-        .Contains(text.ToUpperInvariant())) result.Add(x);
+                            .Contains(text.ToUpperInvariant())) result.Add(x);
                     });
                     break;
                 case "Topic":
                     cols.ForEach(x => {
                         if (x.Topic.ToUpperInvariant()
-        .Contains(text.ToUpperInvariant())) result.Add(x);
+                            .Contains(text.ToUpperInvariant())) result.Add(x);
                     });
                     break;
             }

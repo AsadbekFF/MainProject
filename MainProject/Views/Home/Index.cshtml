@@ -1,16 +1,25 @@
 ﻿@using MainProject.Controllers
 @using Microsoft.AspNetCore.Identity
+@using Microsoft.AspNetCore.Mvc.Localization
+
 @model UserCollections
+
+@inject IViewLocalizer Localizer
 @inject UserManager<User> UserManager
 @inject SignInManager<User> SignInManager
 @inject RoleManager<IdentityRole> RoleManager
+
 @{
     var curUser = await UserManager.GetUserAsync(User);
     string idus = ViewBag.SelectedUser;
-    ViewData["Title"] = "Home Page";
     string GetUserName(string userId)
     {
         return AccountController.dbContext.Users.First(x => x.Id == userId).Name;
+    }
+
+    string getUrlImage(string id)
+    {
+        return AccountController.cloudinary.GetResource(id).Url;
     }
 }
 <style>
@@ -69,7 +78,7 @@
         }
 </style>
 
-<h2>Top 5 biggest collections</h2>
+<h2>@Localizer["TopBiggest"]</h2>
 <partial name="Collections" />
 
 <div class="album bg-light">
@@ -88,7 +97,7 @@
                             }
                             else
                             {
-                                <img class="bd-placeholder-img card-img-top" src="data:image;base64,@System.Convert.ToBase64String(item.Image)" width="300" height="225" role="img" />
+                                <img class="bd-placeholder-img card-img-top" src="@getUrlImage(item.Image)" width="300" height="225" role="img" />
                             }
                             <div class="card-body">
                                 <h2>@item.Name</h2>
@@ -99,14 +108,14 @@
                                     <div class="btn-group">
                                         <input asp-for="UserId" value="@item.UserId" hidden />
                                         <input asp-for="Id" value="@item.Id" hidden />
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenCollection" asp-controller="Account">View</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenCollection" asp-controller="Account">@Localizer["View"]</button>
                                         @if (SignInManager.IsSignedIn(User))
                                         {
                                             @if (curUser.Id == item.UserId
-                                          || User.IsInRole("admin"))
+                                        || User.IsInRole("admin"))
                                             {
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenEditCollection" asp-controller="Account">Edit</button>
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteCollection" asp-controller="Account">Delete</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenEditCollection" asp-controller="Account">@Localizer["Edit"]</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteCollection" asp-controller="Account">@Localizer["Delete"]</button>
                                             }
                                         }
                                     </div>

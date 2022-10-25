@@ -22,7 +22,7 @@ namespace MainProject.Models
 
         protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
         {
-            optionsBuilder.UseSqlServer(@"Server=(localdb)\MSSQLLocalDB;Database=MiddleProject;Trusted_Connection=True;");
+            optionsBuilder.UseSqlServer(@"Data Source=tcp:mainprojectdbserver.database.windows.net,1433;Initial Catalog=MainProject_db;User Id=Asadbek@mainprojectdbserver;Password=adjusttowin1507$$$");
         }
     }
 }

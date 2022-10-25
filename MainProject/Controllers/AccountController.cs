@@ -14,6 +14,11 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using System.Text.Unicode;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication;
+using System.Security.Claims;
+using CloudinaryDotNet;
+using CloudinaryDotNet.Actions;
+using Newtonsoft.Json;
 
 namespace MainProject.Controllers
 {
@@ -25,10 +30,19 @@ namespace MainProject.Controllers
         public static ApplicationDbContext dbContext =
             new(new DbContextOptions<ApplicationDbContext>());
 
+        private static Account account = new Account(
+          "dpkg7ugzn",
+          "819773332465418",
+          "svtDnFf_j5JlZBeDsU7iWhBYRjU");
+
+        public static Cloudinary cloudinary = new(account);
+
         public AccountController(UserManager<User> userManager, SignInManager<User> signInManager)
         {
+            
             _userManager = userManager;
             _signInManager = signInManager;
+            CheckUser();
         }
 
         private bool CheckUser()
@@ -40,7 +54,7 @@ namespace MainProject.Controllers
                     if (_userManager.GetUserAsync(User).Result.Blocked)
                     {
                         _ = _signInManager.SignOutAsync();
-                        return false;
+                        return true;
                     }
                 }
             }
@@ -51,7 +65,6 @@ namespace MainProject.Controllers
         public async Task<IActionResult> Index()
         {
             var user = await _userManager.GetUserAsync(User);
-
             if (CheckUser())
             {
                 return RedirectToAction("Index", "Home");
@@ -66,9 +79,16 @@ namespace MainProject.Controllers
             {
                 return RedirectToAction("Index", "Home");
             }
+            if (TempData["Collections"] == null)
+            {
+                ViewData["Collections"] = dbContext.Users.First(x => x.Id == userId)
+                    .Collections;
+            }
+            else
+            {
+                ViewData["Collections"] = JsonConvert.DeserializeObject<List<UserCollections>>(TempData["Collections"] as string);
+            }
 
-            ViewData["Collections"] = dbContext.Users.First(x => x.Id == userId)
-                .Collections;
             ViewData["SelectedUser"] = userId;
             return View("Index");
         }
@@ -82,22 +102,28 @@ namespace MainProject.Controllers
 
             ViewData["SelectedUser"] = collections.UserId;
             ViewData["SelectedCollection"] = collections.Id;
-            ViewData["Items"] = dbContext.Users.First(x => x.Id == collections.UserId)
-                .Collections.First(x => x.Id == collections.Id).Items;
-            Download(collections.UserId, collections.Id);
+            if (TempData["Items"] == null)
+            {
+                ViewData["Items"] = dbContext.Users.First(x => x.Id == collections.UserId)
+                    .Collections.First(x => x.Id == collections.Id).Items;
+            }
+            else
+            {
+                ViewData["Items"] = JsonConvert.DeserializeObject<List<UserItem>>(TempData["Items"] as string);
+            }
             return View("UserCollection");
         }
 
-        public IActionResult OpenItem(UserItem item, string userId)
+        public IActionResult OpenItem(UserItem item)
         {
             if (CheckUser())
             {
                 return RedirectToAction("Index", "Home");
             }
 
-            ViewData["SelectedUser"] = userId;
+            ViewData["SelectedUser"] = item.UserId;
             ViewData["SelectedCollection"] = item.UserCollectionsId;
-            ViewData["SelectedItem"] = dbContext.Users.First(x => x.Id == userId)
+            ViewData["SelectedItem"] = dbContext.Users.First(x => x.Id == item.UserId)
                 .Collections.First(x => x.Id == item.UserCollectionsId)
                 .Items.First(x => x.Id == item.Id);
             return View("UserItem");
@@ -110,16 +136,7 @@ namespace MainProject.Controllers
             {
                 return RedirectToAction("Index", "Home");
             }
-
-            if (_signInManager.IsSignedIn(User))
-            {
-                var user = _userManager.GetUserAsync(User);
-                if (user.Result.Blocked)
-                {
-                    _signInManager.SignOutAsync();
-                    return RedirectToAction("Index", "Home");
-                }
-            }
+            
             return View(new LoginViewModel { });
         }
 
@@ -162,13 +179,15 @@ namespace MainProject.Controllers
                     Name = model.Name,
                     Password = model.Password,
                     Blocked = false,
+                    EmailConfirmed = true
                 };
 
                 var result = await _userManager.CreateAsync(user, model.Password);
                 if (result.Succeeded)
                 {
                     Task.WaitAll(_signInManager.SignInAsync(user, false));
-
+                    
+                    //AddLogin(user);
                     ViewData["Users"] = _userManager.Users.ToList();
                     return RedirectToAction("Index");
                 }
@@ -202,24 +221,40 @@ namespace MainProject.Controllers
             return View();
         }
 
+        
         public IActionResult AddCollection(UserCollections userCollections,
-            IFormFile image, List<string> type, List<string> nameOfField)
+            IFormFile image, List<string> nameOfIntField,
+            List<string> nameOfStringField, List<string> nameOfDateField)
         {
+            nameOfIntField = nameOfIntField.Where(x => x != null).ToList();
+            nameOfStringField = nameOfStringField.Where(x => x != null).ToList();
+            nameOfDateField = nameOfDateField.Where(x => x != null).ToList();
             if (!dbContext.Users.First(x => x.Id == userCollections.UserId)
                 .Collections.Any(y => y.Name == userCollections.Name))
             {
                 if (image != null)
                 {
-                    using (var ms = new MemoryStream())
-                    {
-                        image.CopyTo(ms);
-                        userCollections.Image = ms.ToArray();
-                    }
+                    var guid = Guid.NewGuid().ToString();
+                    userCollections.Image = guid;
+                    var upload = new ImageUploadParams();
+                    upload.File = new FileDescription("image", image.OpenReadStream());
+                    upload.PublicId = guid;
+                    cloudinary.Upload(upload);
                 }
-                for (int i = 0; i < type.Count; i++)
+                for (int i = 0; i < nameOfIntField.Count; i++)
                 {
                     userCollections.ExtraFields.Add(new ExtraField
-                    { Name = nameOfField[i], Type = type[i] });
+                    { Name = nameOfIntField[i], Type = "int" });
+                }
+                for (int i = 0; i < nameOfStringField.Count; i++)
+                {
+                    userCollections.ExtraFields.Add(new ExtraField
+                    { Name = nameOfStringField[i], Type = "string" });
+                }
+                for (int i = 0; i < nameOfDateField.Count; i++)
+                {
+                    userCollections.ExtraFields.Add(new ExtraField
+                    { Name = nameOfDateField[i], Type = "date" });
                 }
                 dbContext.Users.First(x => x.Id == userCollections.UserId)
                     .Collections.Add(userCollections);
@@ -231,18 +266,20 @@ namespace MainProject.Controllers
 
 
         public IActionResult AddItem(UserItem userItem, IFormFile image,
-            string tags, List<string> extraFieldId, List<string> value)
+            List<string> tags, List<string> extraFieldId, List<string> value)
         {
+            tags = tags.Where(x => x != null).ToList();
             if (image != null)
             {
-                using (var ms = new MemoryStream())
-                {
-                    image.CopyTo(ms);
-                    userItem.Image = ms.ToArray();
-                }
+                var guid = Guid.NewGuid().ToString();
+                userItem.Image = guid;
+                var upload = new ImageUploadParams();
+                upload.File = new FileDescription("image", image.OpenReadStream());
+                upload.PublicId = guid;
+                cloudinary.Upload(upload);
             }
 
-            foreach (var item in tags.Split(" "))
+            foreach (var item in tags)
             {
                 userItem.Tags.Add(new Tag { Name = item, UserItemId = userItem.Id });
             }
@@ -252,7 +289,7 @@ namespace MainProject.Controllers
                 userItem.ExtraFieldValues.Add(
                     new ExtraFieldValue
                     {
-                        ExtraFieldId = extraFieldId[i],
+                        ExtraFieldName = extraFieldId[i],
                         Value = value[i]
                     });
             }
@@ -297,12 +334,14 @@ namespace MainProject.Controllers
 
             if (photo != null)
             {
-                using (var ms = new MemoryStream())
+                var guid = Guid.NewGuid().ToString();
+                collection.Image = guid;
+                var upload = new ImageUploadParams
                 {
-                    photo.CopyTo(ms);
-                    collections.Image = ms.ToArray();
-                }
-                collection.Image = collections.Image;
+                    File = new FileDescription("image", photo.OpenReadStream()),
+                    PublicId = guid
+                };
+                cloudinary.Upload(upload);
             }
 
             dbContext.SaveChanges();
@@ -310,13 +349,16 @@ namespace MainProject.Controllers
             return RedirectToAction("OpenUser", routeValues: new { userId = collection.UserId });
         }
 
-        public IActionResult EditItem(UserItem item, string extra,
-            string extraId, List<string> tag, IFormFile photo)
+        public IActionResult EditItem(UserItem item, List<string> extra,
+            List<string> extraId, List<string> tag, IFormFile photo)
         {
             var item1 = GetItemById(item);
             item1.Name = item.Name;
             item1.Description = item.Description;
-            item1.ExtraFieldValues.First(x => x.Id == extraId).Value = extra;
+            for (int i = 0; i < extraId.Count; i++)
+            {
+                item1.ExtraFieldValues.First(x => x.Id == extraId[i]).Value = extra[i];
+            }
 
             for (int i = 0; i < tag.Count; i++)
             {
@@ -325,11 +367,14 @@ namespace MainProject.Controllers
 
             if (photo != null)
             {
-                using (var ms = new MemoryStream())
+                var guid = Guid.NewGuid().ToString();
+                item1.Image = guid;
+                var upload = new ImageUploadParams
                 {
-                    photo.CopyTo(ms);
-                    item1.Image = ms.ToArray();
-                }
+                    File = new FileDescription("image", photo.OpenReadStream()),
+                    PublicId = guid
+                };
+                cloudinary.Upload(upload);
             }
 
             dbContext.SaveChanges();
@@ -337,6 +382,13 @@ namespace MainProject.Controllers
             return RedirectToAction("OpenCollection",
                 new UserCollections
                 { UserId = item.UserId, Id = item.UserCollectionsId });
+        }
+
+        public IActionResult CancelChanges(UserItem item)
+        {
+            return RedirectToAction("OpenCollection",
+                new UserCollections
+                    { UserId = item.UserId, Id = item.UserCollectionsId });
         }
 
         [HttpPost]
@@ -356,11 +408,12 @@ namespace MainProject.Controllers
                 .Items.First(x => x.Id == message.UserItemId)
                 .Chat.Add(message);
             dbContext.SaveChanges();
-            return OpenItem(new UserItem
+            return RedirectToAction("OpenItem", new UserItem
             {
                 Id = message.UserItemId,
-                UserCollectionsId = userCollectionId
-            }, userId);
+                UserCollectionsId = userCollectionId,
+                UserId = userId
+            });
         }
 
 
@@ -398,11 +451,12 @@ namespace MainProject.Controllers
 
             dbContext.SaveChanges();
 
-            return OpenItem(new UserItem()
+            return RedirectToAction("OpenItem", new UserItem
             {
                 Id = itemId,
-                UserCollectionsId = userCollectionId
-            }, userId);
+                UserCollectionsId = userCollectionId,
+                UserId = userId
+            });
         }
 
         public IActionResult Search(string CustomerName)
@@ -508,6 +562,34 @@ namespace MainProject.Controllers
             {
                 x.Collections.ForEach(y =>
                 {
+                    if (y.Name.ToUpperInvariant().Contains(prefix.ToUpperInvariant()))
+                        vs.Add(y.Name);
+                    if (y.Topic.ToUpperInvariant().Contains(prefix.ToUpperInvariant()))
+                        vs.Add(y.Topic);
+                    y.Items.ForEach(z =>
+                    {
+                        if (z.Name.ToUpperInvariant().Contains(prefix.ToUpperInvariant()))
+                            vs.Add(z.Name);
+                        z.Tags.ForEach(w =>
+                        {
+                            if (w.Name.ToUpperInvariant().Contains(prefix.ToUpperInvariant()))
+                                vs.Add(w.Name);
+                        });
+                    });
+                });
+            }).Wait();
+
+            return Json(vs);
+        }
+
+        [HttpPost]
+        public JsonResult TagAutoComplete(string prefix)
+       {
+            List<string> vs = new();
+            dbContext.Users.ForEachAsync(x =>
+            {
+                x.Collections.ForEach(y =>
+                {
                     y.Items.ForEach(z =>
                     {
                         z.Tags.ForEach(w =>
@@ -522,11 +604,11 @@ namespace MainProject.Controllers
             return Json(vs);
         }
 
-        public void Download(string userId, string collectionId)
+        public ActionResult Download(string userId, string collectionId)
         {
             var coll = GetCollectionById(new UserCollections
             { Id = collectionId, UserId = userId });
-            string text = JsonSerializer.Serialize(coll, new JsonSerializerOptions
+            string text = System.Text.Json.JsonSerializer.Serialize(coll, new JsonSerializerOptions
             {
                 WriteIndented = true,
                 DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
@@ -536,6 +618,169 @@ namespace MainProject.Controllers
 
             System.IO.File.WriteAllText
                 (Environment.CurrentDirectory + @"\wwwroot\Collection.json", text);
+            var bytes = System.IO.File.ReadAllBytes(Environment.CurrentDirectory + @"\wwwroot\Collection.json");
+
+            return File(bytes, "text/plain", $"{coll.Name}.json");
+        }
+
+        public IActionResult Google()
+        {
+            var prop = _signInManager
+                .ConfigureExternalAuthenticationProperties("Google", "/Account/GoogleSuccess");
+
+            return Challenge(prop, "Google");
+        }
+
+        public IActionResult GoogleSuccess()
+        {
+            var info = _signInManager.GetExternalLoginInfoAsync();
+            info.Wait();
+
+            if (info.IsCompletedSuccessfully)
+            {
+                var email = info.Result.Principal.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email).Value;
+
+                var curUser = _userManager.Users.FirstOrDefault(x => x.Email == email);
+
+                if (curUser == null)
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+
+                var add = _userManager.AddLoginAsync(curUser, info.Result);
+                add.Wait();
+            }
+            
+
+            var result = _signInManager.ExternalLoginSignInAsync(
+                info.Result.LoginProvider, info.Result.ProviderKey, false);
+            result.Wait();
+
+            return RedirectToAction("Login");
+        }
+
+        public IActionResult FaceBook()
+        {
+            var prop = _signInManager.ConfigureExternalAuthenticationProperties("Facebook", "/Account/FaceBookSuccess");
+
+            return Challenge(prop, "Facebook");
+        }
+
+        public IActionResult FaceBookSuccess()
+        {
+            var info = _signInManager.GetExternalLoginInfoAsync();
+            info.Wait();
+
+            if (info.IsCompletedSuccessfully)
+            {
+                var email = info.Result.Principal.Claims.FirstOrDefault(x => x.Type == ClaimTypes.Email).Value;
+
+                var curUser = _userManager.Users.FirstOrDefault(x => x.Email == email);
+
+                if (curUser == null)
+                {
+                    return RedirectToAction("Index", "Home");
+                }
+
+                var add = _userManager.AddLoginAsync(curUser, info.Result);
+                add.Wait();
+            }
+
+            var result = _signInManager.ExternalLoginSignInAsync(
+                info.Result.LoginProvider, info.Result.ProviderKey, false);
+            result.Wait();
+
+            return RedirectToAction("Login");
+        }
+
+        public IActionResult FilterCollection(string filterBy, string text,
+           string userId)
+        {
+            List<UserCollections> cols = dbContext.Users.First(x => x.Id == userId).Collections;
+            List<UserCollections> result = new();
+
+            switch (filterBy)
+            {
+                case "Name":
+                    cols.ForEach(x => {
+                        if (x.Name.ToUpperInvariant()
+                            .Contains(text.ToUpperInvariant())) result.Add(x);
+                    });
+                    break;
+                case "Topic":
+                    cols.ForEach(x => {
+                        if (x.Topic.ToUpperInvariant()
+                            .Contains(text.ToUpperInvariant())) result.Add(x);
+                    });
+                    break;
+            }
+            TempData["Collections"] = JsonConvert.SerializeObject(result);
+            return RedirectToAction("OpenUser", routeValues: new { userId = userId });
+        }
+
+        public IActionResult SortCollection(string userId)
+        {
+            List<UserCollections> Collections = dbContext.Users.First(x => x.Id == userId)
+                .Collections;
+            Collections = Collections.OrderBy(x => x.Name).ToList();
+            TempData["Collections"] = JsonConvert.SerializeObject(Collections);
+            return RedirectToAction("OpenUser", routeValues: new { userId = userId});
+        }
+
+        public IActionResult FilterItem(string filterBy, string text,
+            string userId, string collectionId)
+        {
+            List<UserItem> cols = dbContext.Users.First(x => x.Id == userId)
+                .Collections.First(x => x.Id == collectionId).Items;
+            List<UserItem> result = new();
+
+            switch (filterBy)
+            {
+                case "Name":
+                    cols
+                        .ForEach(x => {
+                            if (x.Name.ToUpperInvariant()
+                .Contains(text.ToUpperInvariant())) result.Add(x);
+                        });
+                    break;
+                case "Description":
+                    cols
+                        .ForEach(x => {
+                            if (x.Description.ToUpperInvariant()
+                .Contains(text.ToUpperInvariant())) result.Add(x);
+                        });
+                    break;
+                case "Tag":
+                    cols
+                        .ForEach(x => {
+                            if (x.Tags.Any(y => y.Name.ToUpperInvariant().Contains(text.ToUpperInvariant())))
+                                result.Add(x);
+                        });
+                    break;
+            }
+
+            TempData["Items"] = JsonConvert.SerializeObject(result);
+            return RedirectToAction("OpenCollection", new UserCollections
+            {
+                Id = collectionId,
+                UserId = userId
+            });
+        }
+
+        public IActionResult SortItem(string userId, string collectionId)
+        {
+            List<UserItem> Items = dbContext.Users.First(x => x.Id == userId)
+                .Collections.First(x => x.Id == collectionId).Items;
+
+            Items = Items.OrderBy(x => x.Name).ToList();
+
+            TempData["Items"] = JsonConvert.SerializeObject(Items);
+
+            return RedirectToAction("OpenCollection", new UserCollections
+            {
+                Id = collectionId,
+                UserId = userId
+            });
         }
     }
 }

@@ -1,9 +1,12 @@
 ﻿@using MainProject.Controllers
 @using Microsoft.AspNetCore.Identity
-@model UserCollections
+@using Microsoft.AspNetCore.Mvc.Localization
+
+@inject IViewLocalizer Localizer
 @inject UserManager<User> UserManager
 @inject SignInManager<User> SignInManager
 @inject RoleManager<IdentityRole> RoleManager
+@model UserCollections
 @{
     var curUser = await UserManager.GetUserAsync(User);
     ViewData["Title"] = "Home Page";
@@ -12,7 +15,7 @@
         return AccountController.dbContext.Users.First(x => x.Id == userId).Name;
     }
 }
-<h2>Collections</h2>
+<h2>@Localizer["Collections"]</h2>
 <div class="album bg-light">
     <div class="container">
         <div class="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-3">
@@ -40,13 +43,14 @@
                                     <div class="btn-group">
                                         <input asp-for="UserId" value="@item.UserId" hidden />
                                         <input asp-for="Id" value="@item.Id" hidden />
-                                        <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenCollection" asp-controller="Account">View</button>
+                                        <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenCollection" asp-controller="Account">@Localizer["View"]</button>
                                         @if (SignInManager.IsSignedIn(User))
                                         {
                                             @if (curUser.Id == item.UserId
-                                           || User.IsInRole("admin"))
+                                         || User.IsInRole("admin"))
                                             {
-                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenEditCollection" asp-controller="Account">Edit</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="OpenEditCollection" asp-controller="Account">@Localizer["Edit"]</button>
+                                                <button type="submit" class="btn btn-sm btn-outline-secondary" asp-action="DeleteCollection" asp-controller="Account">@Localizer["Delete"]</button>
                                             }
                                         }
                                     </div>
